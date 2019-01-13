@@ -1,4 +1,4 @@
-//Quizz v1.0.0 Windows
+﻿//Quizz v1.0.0 Windows
 //Copyright (c) BitTim 2019
 #include <iostream>
 #include <chrono>
@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
+#include <math.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_mixer.h>
@@ -590,11 +591,11 @@ void update()
 	if(sleep)
 	{
 		sleep = false;
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		delay_ms(1000);
 	}
 }
 
-int main(int argc, char* argv[])
+int WinMain(int argc, char* argv[])
 {
 	init();
 
