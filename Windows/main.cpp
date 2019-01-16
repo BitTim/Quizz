@@ -652,7 +652,7 @@ void update()
 	if(sleep)
 	{
 		sleep = false;
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		delay_ms(1000);
 	}
 }
 
