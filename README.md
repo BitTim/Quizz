@@ -7,4 +7,6 @@
 * *Schritt 2*: Geben sie in die Erste Zeile Ihre Frage ein
 * *Schritt 3*: Geben sie in die nächsten 4 Zeilen Ihre Antwortmöglichkeiten ein. Eine Antwortmöglichkeit pro Zeile
 * *Schritt 4*: Geben sie in die nächste Zeile die Nummer der richtigen Antwort an
-* *Schritt 5*: Speichern sie die Datei als \*.qzq in <Pfad zum Programm>/data/questions 
+* *Schritt 5*: Speichern sie die Datei als *\*.qzq* in ***(Pfad zum Programm)/data/questions/(Kategorie der Frage)/***
+  
+Wenn eine Kategorie nicht existiert, erstellen sie einfach einen Ordner in ***(Pfad zum Programm)/data/questions/*** mit dem Namen der Kategorie
