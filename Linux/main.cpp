@@ -109,20 +109,20 @@ void init()
 	correct_sound = Mix_LoadWAV("data/sound/correct.wav");
 	wrong_sound = Mix_LoadWAV("data/sound/wrong.wav");
 
-	Mix_PlayMusic(bgm, -1);
-
 	config_file.open("data/config.cfg", std::fstream::in);
 
 	std::getline(config_file, str_buffer);
-  	screen_width = std::stoi(str_buffer);
+  screen_width = std::stoi(str_buffer);
 
-  	std::getline(config_file, str_buffer);
-  	screen_height = std::stoi(str_buffer);
+  std::getline(config_file, str_buffer);
+  screen_height = std::stoi(str_buffer);
 
-		std::getline(config_file, str_buffer);
-  	music = std::stoi(str_buffer);
+	std::getline(config_file, str_buffer);
+  music = (bool)std::stoi(str_buffer);
 
-  	config_file.close();
+  config_file.close();
+
+	if(music) Mix_PlayMusic(bgm, -1);
 }
 
 void end_screen()
@@ -258,6 +258,9 @@ int check_answer()
 	{
 		if(answer >= 1 && answer <= 3 && menu_type == 4)
 		{
+			int prev_screen_w = screen_width;
+			int prev_screen_h = screen_height;
+
 			config_file.open("data/config.cfg", std::fstream::out);
 
 			if(answer == 1)
@@ -278,12 +281,14 @@ int check_answer()
 				screen_height = 720;
 			}
 
-			config_file << screen_width << std::endl << screen_height << std::endl << music << std::endl;
-
+			config_file << screen_width << std::endl << screen_height << std::endl << (int)music << std::endl;
 			config_file.close();
 
-			end_screen();
-			re_init_screen();
+			if(prev_screen_w != screen_width || prev_screen_h != screen_height)
+			{
+				end_screen();
+				re_init_screen();
+			}
 		}
 		else
 		{
