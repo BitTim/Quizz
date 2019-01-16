@@ -119,6 +119,9 @@ void init()
   	std::getline(config_file, str_buffer);
   	screen_height = std::stoi(str_buffer);
 
+		std::getline(config_file, str_buffer);
+  	music = std::stoi(str_buffer);
+
   	config_file.close();
 }
 
@@ -253,23 +256,29 @@ int check_answer()
 	}
 	else if(menu && !trig_end)
 	{
-		if((answer == 1 || answer == 3) && menu_type == 4)
+		if(answer >= 1 && answer <= 3 && menu_type == 4)
 		{
 			config_file.open("data/config.cfg", std::fstream::out);
 
 			if(answer == 1)
 			{
-				config_file << "1366" << std::endl << "768" << std::endl;
 				screen_width = 1366;
 				screen_height = 768;
 			}
 
+			if(answer == 2)
+			{
+				music ? Mix_HaltMusic() : Mix_PlayMusic(bgm, -1);
+				music = !music;
+			}
+
 			if(answer == 3)
 			{
-				config_file << "1280" << std::endl << "720" << std::endl;
 				screen_width = 1280;
 				screen_height = 720;
 			}
+
+			config_file << screen_width << std::endl << screen_height << std::endl << music << std::endl;
 
 			config_file.close();
 
@@ -300,11 +309,6 @@ int check_answer()
 				case 2:
 					if(menu_type == 1) menu_type = 3;
 					if(menu_type == 2) if(amount_selected_questions > 1) amount_selected_questions--;
-					if(menu_type == 4)
-					{
-						music ? Mix_HaltMusic() : Mix_PlayMusic(bgm, -1);
-						music = !music;
-					}
 					if(menu_type == 5) reset();
 					if(menu_type == 6) if(curr_category < num_categories - 1) curr_category++;
 					break;
