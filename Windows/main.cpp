@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
-#incldue <math.h>
+#include <math.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_mixer.h>
