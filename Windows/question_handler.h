@@ -10,28 +10,64 @@
 #include "variables.h"
 
 std::vector<std::string> files;
+std::vector<std::string> categories;
 int num_files = 0;
+int num_cfiles = 0;
 char buffer[100];
 
-int load_question_files()
+int load_category_files()
 {
 	struct dirent *directory;
-	DIR *dir = opendir("data/questions/."); 
-  
-	if (dir == NULL)  // opendir returns NULL if couldn't open directory 
-	{ 
+	DIR *dir = opendir("data/questions/.");
+
+	if (dir == NULL)
+	{
 	    printf("Could not open current directory\n");
 	    return -1;
-	} 
+	}
 
-	while ((directory = readdir(dir)) != NULL) 
+	while ((directory = readdir(dir)) != NULL)
+	{
+	    if(directory->d_name[0] != '.')
+	    {
+	    	printf("Found Category: %s\n", directory->d_name);
+	    	categories.push_back(directory->d_name);
+	    	num_cfiles++;
+	    }
+	}
+
+	printf("Found %d Categories\n", num_cfiles);
+
+	return num_cfiles;
+}
+
+int load_question_files(int category)
+{
+	files.clear();
+	struct dirent *directory;
+
+	strcpy(buffer, "data/questions/");
+	strcat(buffer, categories[category].c_str());
+	strcat(buffer, "/.");
+
+	printf("Selected Category: %s\n", buffer);
+
+	DIR *dir = opendir(buffer);
+
+	if (dir == NULL)
+	{
+	    printf("Could not open current directory\n");
+	    return -1;
+	}
+
+	while ((directory = readdir(dir)) != NULL)
 	{
 	    if(directory->d_name[0] != '.')
 	    {
 	    	printf("Found Question: %s\n", directory->d_name);
 	    	files.push_back(directory->d_name);
 	    	num_files++;
-	    } 
+	    }
 	}
 
 	if(num_files == 1)
@@ -42,12 +78,12 @@ int load_question_files()
 	{
 		printf("\nFound %d Files\n", num_files);
 	}
-  
+
 	closedir(dir);
 	return files.size();
 }
 
-int print_question(SDL_Renderer *renderer, int id, int *corr_answer, TTF_Font *font, SDL_Color color)
+int print_question(SDL_Renderer *renderer, int id, int category, int *corr_answer, TTF_Font *font, SDL_Color color)
 {
 	int text_width, text_height;
 	std::string str_buffer;
@@ -57,6 +93,8 @@ int print_question(SDL_Renderer *renderer, int id, int *corr_answer, TTF_Font *f
 	std::string answers[4];
 
 	strcpy(buffer, "data/questions/");
+	strcat(buffer, categories[category].c_str());
+	strcat(buffer, "/");
 	strcat(buffer, files[id].c_str());
 
 	question_file.open(buffer);
@@ -74,7 +112,7 @@ int print_question(SDL_Renderer *renderer, int id, int *corr_answer, TTF_Font *f
   	}
   	else
   	{
-  		std::cout << "Unable to open file"; 
+  		std::cout << "Unable to open file";
   		return -1;
   	}
 
