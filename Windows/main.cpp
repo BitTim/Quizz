@@ -1,4 +1,4 @@
-﻿//Quizz v1.0.0 Windows
+//Quizz v1.0.0 Linux
 //Copyright (c) BitTim 2019
 #include <iostream>
 #include <chrono>
@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
-#include <math.h>
+#incldue <math.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_mixer.h>
@@ -45,11 +45,14 @@ int unused;
 bool quit = false;
 bool menu = true;
 bool sleep = false;
+bool menu_select = false;
 
 bool escape_down = false;
 bool left_mouse_down = false;
 
 int num_questions = 0;
+int num_categories = 0;
+int curr_category = 0;
 int curr_question = 0;
 int amount_selected_questions = 1;
 int menu_type = 1;
@@ -99,8 +102,8 @@ void init()
 	font = TTF_OpenFont("data/fonts/font.ttf", 50);
 	if(!font) std::cout << "Error loading font" << std::endl;
 
-	num_questions = load_question_files();
-	if(num_questions == -1) std::cout << "Error loading questions" << std::endl;
+	num_categories = load_category_files();
+	if(num_categories == -1) std::cout << "Error loading categroies" << std::endl;
 
 	bgm = Mix_LoadMUS("data/sound/bgm.mp3");
 	click = Mix_LoadWAV("data/sound/click.wav");
@@ -108,19 +111,20 @@ void init()
 	correct_sound = Mix_LoadWAV("data/sound/correct.wav");
 	wrong_sound = Mix_LoadWAV("data/sound/wrong.wav");
 
-	Mix_PlayMusic(bgm, -1);
-
 	config_file.open("data/config.cfg", std::fstream::in);
 
 	std::getline(config_file, str_buffer);
-  	screen_width = std::stoi(str_buffer);
+  screen_width = std::stoi(str_buffer);
 
-  	std::getline(config_file, str_buffer);
-  	screen_height = std::stoi(str_buffer);
+  std::getline(config_file, str_buffer);
+  screen_height = std::stoi(str_buffer);
 
-  	config_file.close();
+	std::getline(config_file, str_buffer);
+  music = (bool)std::stoi(str_buffer);
 
-	get_new_id();
+  config_file.close();
+
+	if(music) Mix_PlayMusic(bgm, -1);
 }
 
 void end_screen()
@@ -149,7 +153,11 @@ void end()
 
 int get_new_id()
 {
-	if(curr_question < amount_selected_questions)
+	if(num_questions == 0)
+	{
+		printf("No Questions in this Category!");
+	}
+	else if(curr_question < amount_selected_questions)
 	{
 		int n_secs = 0;
 		int rnd = 0;
@@ -180,7 +188,7 @@ int get_new_id()
 		return 0;
 	}
 
-	if(curr_question >= amount_selected_questions)
+	if(curr_question >= amount_selected_questions && num_questions != 0)
 	{
 		first_trig_end = true;
 		return 0;
@@ -191,7 +199,7 @@ int get_new_id()
 
 void reset()
 {
-	curr_question = 1;
+	curr_question = 0;
 	menu_type = 2;
 	menu = true;
 
@@ -212,7 +220,7 @@ int check_answer()
 			return -1;
 		}
 
-		if(answer == corr_answer) 
+		if(answer == corr_answer)
 		{
 			answer = 0;
 			answer_history[curr_question - 1] = 1;
@@ -250,28 +258,39 @@ int check_answer()
 	}
 	else if(menu && !trig_end)
 	{
-		if((answer == 1 || answer == 3) && menu_type == 4)
+		if(answer >= 1 && answer <= 3 && menu_type == 4)
 		{
+			int prev_screen_w = screen_width;
+			int prev_screen_h = screen_height;
+
 			config_file.open("data/config.cfg", std::fstream::out);
 
 			if(answer == 1)
 			{
-				config_file << "1366" << std::endl << "768" << std::endl;
 				screen_width = 1366;
 				screen_height = 768;
 			}
 
+			if(answer == 2)
+			{
+				music ? Mix_HaltMusic() : Mix_PlayMusic(bgm, -1);
+				music = !music;
+			}
+
 			if(answer == 3)
 			{
-				config_file << "1280" << std::endl << "720" << std::endl;
 				screen_width = 1280;
 				screen_height = 720;
 			}
-			
+
+			config_file << screen_width << std::endl << screen_height << std::endl << (int)music << std::endl;
 			config_file.close();
 
-			end_screen();
-			re_init_screen();
+			if(prev_screen_w != screen_width || prev_screen_h != screen_height)
+			{
+				end_screen();
+				re_init_screen();
+			}
 		}
 		else
 		{
@@ -281,27 +300,24 @@ int check_answer()
 					if(menu_type == 1)
 					{
 						reset();
-						menu_type = 2;
-						amount_selected_questions--;
+						menu_type = 6;
 					}
 
 					if(menu_type == 2) if(amount_selected_questions < num_questions) amount_selected_questions++;
 					if(menu_type == 5)
 					{
+						menu_select = true;
 						menu = false;
 						delay_ms(200);
 					}
+					if(menu_type == 6) if(curr_category > 0) curr_category--;
 					break;
 
 				case 2:
 					if(menu_type == 1) menu_type = 3;
 					if(menu_type == 2) if(amount_selected_questions > 1) amount_selected_questions--;
-					if(menu_type == 4)
-					{
-						music ? Mix_HaltMusic() : Mix_PlayMusic(bgm, -1);
-						music = !music;
-					}
 					if(menu_type == 5) reset();
+					if(menu_type == 6) if(curr_category < num_categories - 1) curr_category++;
 					break;
 
 				case 3:
@@ -314,9 +330,17 @@ int check_answer()
 							question_history.push_back(-1);
 						}
 
+						get_new_id();
 						question_history[0] = curr_question_id;
+						menu_select = true;
 						menu = false;
 						delay_ms(200);
+					}
+					if(menu_type == 6)
+					{
+						num_questions = load_question_files(curr_category);
+						if(num_questions == -1) std::cout << "Error loading questions" << std::endl;
+						menu_type = 2;
 					}
 					break;
 
@@ -326,7 +350,8 @@ int check_answer()
 						quit = true;
 						Mix_PlayChannel(-1, click, 0);
 					}
-					if(menu_type == 2 || menu_type == 3 || menu_type == 4 || menu_type == 5) menu_type = 1;
+					if(menu_type == 2) menu_type = 6;
+					if(menu_type == 3 || menu_type == 4 || menu_type == 5 || menu_type == 6) menu_type = 1;
 					break;
 			}
 		}
@@ -383,7 +408,7 @@ void draw_screen()
 		//Text
 		if(screen == 0)
 		{
-			print_question(renderer, curr_question_id, &corr_answer, font, text_color);
+			print_question(renderer, curr_question_id, curr_category, &corr_answer, font, text_color);
 			sleep = false;
 		}
 		else if(screen == 1)
@@ -403,12 +428,15 @@ void draw_screen()
 	{
 		int text_height = 0, text_width = 0, text_width_2 = 0, text_height_2 = 0;
 		SDL_SetRenderDrawColor(renderer, 39, 103, 196, 255);
-		SDL_RenderClear(renderer);
+		if(first_trig_end)
+		{
+			SDL_RenderClear(renderer);
 
-		SDL_SetRenderDrawColor(renderer, tile_color_menu[0], tile_color_menu[1], tile_color_menu[2], 255);
+			SDL_SetRenderDrawColor(renderer, tile_color_menu[0], tile_color_menu[1], tile_color_menu[2], 255);
 
-		//Question Box
-		SDL_RenderDrawBox(renderer, 20, 20, screen_width - 40, screen_height / 2 + screen_height / 4 - 40);
+			//Question Box
+			SDL_RenderDrawBox(renderer, 20, 20, screen_width - 40, screen_height / 2 + screen_height / 4 - 40);
+		}
 
 		//Answer Boxes
 		answer == 3 ? SDL_SetRenderDrawColor(renderer, 168, 45, 98, 255) : SDL_SetRenderDrawColor(renderer, tile_color_menu[0], tile_color_menu[1], tile_color_menu[2], 255);
@@ -418,44 +446,52 @@ void draw_screen()
 		SDL_RenderDrawBox(renderer, screen_width / 2 + 10, screen_height / 2 + screen_height / 4 + 10, screen_width / 2 - 30, screen_height / 4 - 30);
 
 		//Text
-		sprintf(buffer, "%d ", amount_selected_questions);
-		TTF_Print(renderer, "Sie haben ", &text_width, &unused, 30, 30, screen_width - 40, font, text_color);
-		TTF_Print(renderer, buffer, &text_width_2, &unused, 30 + text_width, 30, screen_width - 40, font, text_color);
-		TTF_Print(renderer, "Fragen Beantwortet", &unused, &text_height, 30 + text_width + text_width_2, 30, screen_width - 40, font, text_color);
+		if(first_trig_end)
+		{
+			sprintf(buffer, "%d ", amount_selected_questions);
+			TTF_Print(renderer, "Sie haben ", &text_width, &unused, 30, 30, screen_width - 40, font, text_color);
+			TTF_Print(renderer, buffer, &text_width_2, &unused, 30 + text_width, 30, screen_width - 40, font, text_color);
+			TTF_Print(renderer, "Fragen Beantwortet", &unused, &text_height, 30 + text_width + text_width_2, 30, screen_width - 40, font, text_color);
 
-		sprintf(buffer, "%d ", correct);
-		TTF_Print(renderer, "Davon haben sie ", &text_width, &unused, 30, 30 + text_height, screen_width - 40, font, text_color);
-		TTF_Print(renderer, buffer, &text_width_2, &unused, 30 + text_width, 30 + text_height, screen_width - 40, font, green_color);
-		TTF_Print(renderer, "Richtig", &unused, &text_height_2, 30 + text_width + text_width_2, 30 + text_height, screen_width - 40, font, green_color);
+			sprintf(buffer, "%d ", correct);
+			TTF_Print(renderer, "Davon haben sie ", &text_width, &unused, 30, 30 + text_height, screen_width - 40, font, text_color);
+			TTF_Print(renderer, buffer, &text_width_2, &unused, 30 + text_width, 30 + text_height, screen_width - 40, font, green_color);
+			TTF_Print(renderer, "Richtig", &unused, &text_height_2, 30 + text_width + text_width_2, 30 + text_height, screen_width - 40, font, green_color);
 
-		text_height += text_height_2;
+			text_height += text_height_2;
 
-		sprintf(buffer, "%d ", wrong);
-		TTF_Print(renderer, "und ", &text_width, &unused, 30, 30 + text_height, screen_width - 40, font, text_color);
-		TTF_Print(renderer, buffer, &text_width_2, &unused, 30 + text_width, 30 + text_height, screen_width - 40, font, red_color);
-		text_width += text_width_2;
-		TTF_Print(renderer, "Falsch", &text_width_2, &text_height_2, 30 + text_width, 30 + text_height, screen_width - 40, font, red_color);
-		TTF_Print(renderer, " beantwortet", &unused, &unused, 30 + text_width + text_width_2, 30 + text_height, screen_width - 40, font, text_color);
+			sprintf(buffer, "%d ", wrong);
+			TTF_Print(renderer, "und ", &text_width, &unused, 30, 30 + text_height, screen_width - 40, font, text_color);
+			TTF_Print(renderer, buffer, &text_width_2, &unused, 30 + text_width, 30 + text_height, screen_width - 40, font, red_color);
+			text_width += text_width_2;
+			TTF_Print(renderer, "Falsch", &text_width_2, &text_height_2, 30 + text_width, 30 + text_height, screen_width - 40, font, red_color);
+			TTF_Print(renderer, " beantwortet", &unused, &unused, 30 + text_width + text_width_2, 30 + text_height, screen_width - 40, font, text_color);
 
-		corr_rate = (int)((float)(100.0f * correct / amount_selected_questions));
-		text_height += text_height_2;
+			if(amount_selected_questions == 0) std::cout << "Division by 0" << std::endl;
 
-		sprintf(buffer, "%d", corr_rate);
-		strcat(buffer, "\% ");
-		TTF_Print(renderer, "Sie haben ", &text_width, &unused, 30, 30 + text_height, screen_width - 40, font, text_color);
-		TTF_Print(renderer, buffer, &text_width_2, &unused, 30 + text_width, 30 + text_height, screen_width - 40, font, green_color);
-		TTF_Print(renderer, "der Fragen", &unused, &text_height_2, 30 + text_width + text_width_2, 30 + text_height, screen_width - 40, font, text_color);
-		TTF_Print(renderer, "richtig beantwortet", &unused, &unused, 30, 30 + text_height + text_height_2, screen_width - 40, font, text_color);
+			corr_rate = (int)((float)(100.0f * correct / amount_selected_questions));
+			text_height += text_height_2;
+
+			sprintf(buffer, "%d", corr_rate);
+			strcat(buffer, "\% ");
+			TTF_Print(renderer, "Sie haben ", &text_width, &unused, 30, 30 + text_height, screen_width - 40, font, text_color);
+			TTF_Print(renderer, buffer, &text_width_2, &unused, 30 + text_width, 30 + text_height, screen_width - 40, font, green_color);
+			TTF_Print(renderer, "der Fragen", &unused, &text_height_2, 30 + text_width + text_width_2, 30 + text_height, screen_width - 40, font, text_color);
+			TTF_Print(renderer, "richtig beantwortet", &unused, &unused, 30, 30 + text_height + text_height_2, screen_width - 40, font, text_color);
+		}
 
 		TTF_Print(renderer, "Nochmal", &unused, &unused, 30, screen_height / 2 + screen_height / 4 + 10, screen_width - 40, font, text_color);
 		TTF_Print(renderer, "Beenden", &unused, &unused, screen_width / 2 + 30, screen_height / 2 + screen_height / 4 + 10, screen_width - 40, font, text_color);
 
 		//Pie Chart
-		SDL_SetRenderDrawColor(renderer, 53, 214, 56, 255);
-		SDL_RenderDrawCircle(renderer, screen_width / 2 + screen_width / 4, (screen_height / 2 + screen_height / 4) / 2, screen_width / 4 - 150, 0, 360 * 100 * corr_rate / (100 * 100));
-		
-		SDL_SetRenderDrawColor(renderer, 214, 53, 56, 255);
-		SDL_RenderDrawCircle(renderer, screen_width / 2 + screen_width / 4, (screen_height / 2 + screen_height / 4) / 2, screen_width / 4 - 150, 360 * 100 * corr_rate / (100 * 100), 360);
+		if(first_trig_end)
+		{
+			SDL_SetRenderDrawColor(renderer, 53, 214, 56, 255);
+			SDL_RenderDrawCircle(renderer, screen_width / 2 + screen_width / 4, (screen_height / 2 + screen_height / 4) / 2, screen_width / 4 - 150, 0, 360 * 100 * corr_rate / (100 * 100));
+
+			SDL_SetRenderDrawColor(renderer, 214, 53, 56, 255);
+			SDL_RenderDrawCircle(renderer, screen_width / 2 + screen_width / 4, (screen_height / 2 + screen_height / 4) / 2, screen_width / 4 - 150, 360 * 100 * corr_rate / (100 * 100), 360);
+		}
 	}
 	else if(menu && !trig_end)
 	{
@@ -484,7 +520,7 @@ void draw_screen()
 		switch(menu_type)
 		{
 			case 1:
-				TTF_Print(renderer, "Willkommen zu Quizz v1.0.0!", &unused, &unused, 30, 30, screen_width - 40, font, text_color);
+				TTF_Print(renderer, "Willkommen zu Quizz v1.1.0!", &unused, &unused, 30, 30, screen_width - 40, font, text_color);
 
 				TTF_Print(renderer, "Spielen", &unused, &unused, 30, screen_height / 2 + 30, screen_width - 40, font, text_color);
 				TTF_Print(renderer, "Credits", &unused, &unused, screen_width / 2 + 30, screen_height / 2 + 30, screen_width - 40, font, text_color);
@@ -560,38 +596,63 @@ void draw_screen()
 				TTF_Print(renderer, "Menü", &unused, &unused, screen_width / 2 + 30, screen_height / 2 + screen_height / 4 + 10, screen_width - 40, font, text_color);
 				break;
 			}
+
+			case 6:
+			{
+				int text_height = 0, text_width = 0;
+
+				TTF_Print(renderer, "In welcher Kategorie wollen sie Fragen beantworten?", &unused, &text_height, 30, 30, screen_width - 40, font, text_color);
+
+				sprintf(buffer, "%d", num_categories);
+				TTF_Print(renderer, "Verfügbar: ", &text_width, &unused, 30, 30 + text_height + 10, screen_width - 40, font, text_color);
+				TTF_Print(renderer, buffer, &unused, &unused, 30 + text_width, 30 + text_height + 10, screen_width - 40, font, text_color);
+
+				sprintf(buffer, "%s", categories[curr_category].c_str());
+				TTF_Print(renderer, "Ausgewählt: ", &text_width, &unused, screen_width / 2, 30 + text_height + 10, screen_width / 2 - 20, font, text_color);
+				TTF_Print(renderer, buffer, &unused, &unused, screen_width / 2 + text_width, 30 + text_height + 10, screen_width / 2 - 20, font, text_color);
+
+
+				TTF_Print(renderer, "Vorheriges", &unused, &unused, 30, screen_height / 2 + 30, screen_width - 40, font, text_color);
+				TTF_Print(renderer, "Nächstes", &unused, &unused, screen_width / 2 + 30, screen_height / 2 + 30, screen_width - 40, font, text_color);
+				TTF_Print(renderer, "Weiter", &unused, &unused, 30, screen_height / 2 + screen_height / 4 + 10, screen_width - 40, font, text_color);
+				TTF_Print(renderer, "Zurück", &unused, &unused, screen_width / 2 + 30, screen_height / 2 + screen_height / 4 + 10, screen_width - 40, font, text_color);
+				break;
+			}
 		}
 	}
 }
 
 void update()
 {
-	if(answer != prev_answer)
-	{
-		if(answer != 0) Mix_PlayChannel(-1, hover, 0);
-		draw_screen();
-	}
-
-	prev_answer = answer;
-
-	if(first_trig_end)
-	{
-		trig_end = true;
-		first_trig_end = false;
-	}
-
 	if(mouse_hover(20, screen_height / 2 + 20, screen_width / 2 - 30, screen_height / 4 - 30)) answer = 1;
 	else if(mouse_hover(screen_width / 2 + 10, screen_height / 2 + 20, screen_width / 2 - 30, screen_height / 4 - 30)) answer = 2;
 	else if(mouse_hover(20, screen_height / 2  + screen_height / 4 + 10, screen_width / 2 - 30, screen_height / 4 - 30)) answer = 3;
 	else if(mouse_hover(screen_width / 2 + 10, screen_height / 2 + screen_height / 4 + 10, screen_width / 2 - 30, screen_height / 4 - 30)) answer = 4;
 	else answer = 0;
 
+	if(answer != prev_answer)
+	{
+		if(answer != 0) Mix_PlayChannel(-1, hover, 0);
+		draw_screen();
+	}
+
+	if(!trig_end) draw_screen();
+
+	prev_answer = answer;
+
+	if(first_trig_end)
+	{
+		trig_end = true;
+		draw_screen();
+		first_trig_end = false;
+	}
+
 	SDL_RenderPresent(renderer);
 
 	if(sleep)
 	{
 		sleep = false;
-		delay_ms(1000);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 }
 
@@ -611,7 +672,7 @@ int WinMain(int argc, char* argv[])
 			{
 				case SDL_QUIT:
 					quit = true;
-					break;	
+					break;
 
 				case SDL_MOUSEBUTTONDOWN:
 					switch(event.button.button)
@@ -630,6 +691,12 @@ int WinMain(int argc, char* argv[])
 									{
 										end();
 										return -1;
+									}
+
+									if(menu_select)
+									{
+										menu_select = false;
+										screen = 0;
 									}
 								}
 							}
