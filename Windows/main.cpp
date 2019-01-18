@@ -1,4 +1,4 @@
-//Quizz v1.0.0 Linux
+﻿//Quizz v1.1.1 Windows
 //Copyright (c) BitTim 2019
 #include <iostream>
 #include <chrono>
@@ -520,7 +520,7 @@ void draw_screen()
 		switch(menu_type)
 		{
 			case 1:
-				TTF_Print(renderer, "Willkommen zu Quizz v1.1.0!", &unused, &unused, 30, 30, screen_width - 40, font, text_color);
+				TTF_Print(renderer, "Willkommen zu Quizz v1.1.1!", &unused, &unused, 30, 30, screen_width - 40, font, text_color);
 
 				TTF_Print(renderer, "Spielen", &unused, &unused, 30, screen_height / 2 + 30, screen_width - 40, font, text_color);
 				TTF_Print(renderer, "Credits", &unused, &unused, screen_width / 2 + 30, screen_height / 2 + 30, screen_width - 40, font, text_color);
